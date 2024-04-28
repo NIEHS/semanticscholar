@@ -4,17 +4,16 @@
 cfg <- function() {
 
   res <- list(
-    S2_api = "https://api.semanticscholar.org/",
-    S2_ratelimit = round((5 * 60) / (100 - 1), digits = 2)
+    s2_api = "https://api.semanticscholar.org/",
+    s2_ratelimit = round((5 * 60) / (100 - 1), digits = 2)
   )
 
   if (Sys.getenv("SEMANTICSCHOLAR_API") != "") {
-    res$S2_key <- Sys.getenv("SEMANTICSCHOLAR_API")
-    res$S2_api <- "https://partner.semanticscholar.org/"
-    res$S2_ratelimit <- 1 / (100 - 1) # for approx 100 requests per second
+    res$s2_key <- Sys.getenv("SEMANTICSCHOLAR_API")
+    res$s2_ratelimit <- 1 / (100 - 1) # for approx 100 requests per second
   }
 
-  return (res)
+  return(res)
 }
 
 #' Endpoint used for requests to Semantic Scholar API
@@ -22,8 +21,9 @@ cfg <- function() {
 #' When environment variable SEMANTICSCHOLAR_API is set to a valid API key this
 #' value differs as endpoints allowing higher rate limits are being used.
 #' @export
-S2_api <- function()
-  cfg()$S2_api
+#' @noRd
+s2_api <- function()
+  cfg()$s2_api
 
 #' Rate limit for API calls
 #'
@@ -33,8 +33,9 @@ S2_api <- function()
 #' value can be approx 0.01 (for 100 requests per second) but if no API key is
 #' used, the default value will be around 3.5 (allowing a maximum of 100 requests per 5 minutes)
 #' @export
-S2_ratelimit <- function()
-  cfg()$S2_ratelimit
+#' @noRd
+s2_ratelimit <- function()
+  cfg()$s2_ratelimit
 
 #' Attribution
 #'
@@ -47,10 +48,11 @@ S2_ratelimit <- function()
 #' Semantic Scholar at https://www.semanticscholar.org/ with
 #' a utm_source=api UTM parameter.
 #' @export
-S2_attribution <- function() {
+s2_attribution <- function() {
   sprintf(
-    "Data source: Semantic Scholar API\n%s?utm_source=api\n%s", S2_api(), "\n",
-    "Data license agreement: http://s2-public-api-prod.us-west-2.elasticbeanstalk.com/license/")
+    "Data source: Semantic Scholar API\n%s?utm_source=api\n%s", s2_api(), "\n",
+    "Data license agreement: https://www.semanticscholar.org/product/api/license")
+  # https://www.semanticscholar.org/paper/The-Semantic-Scholar-Open-Data-Platform-Kinney-Anastasiades/cb92a7f9d9dbcf9145e32fdfa0e70e2a6b828eb1
 }
 
 #' Retrieve paper information
@@ -61,34 +63,42 @@ S2_attribution <- function() {
 #' @param include_unknown_refs logical, Default: FALSE
 #' @details
 #' Example of Accessible Paper Identifiers:
-#' - S2 Paper ID : 0796f6cd7f0403a854d67d525e9b32af3b277331
-#' - DOI : 10.1038/nrn3241
-#' - ArXiv ID : arXiv:1705.10311
-#' - MAG ID : MAG:112218234
-#' - ACL ID : ACL:W12-3903
-#' - PubMed ID : PMID:19872477
-#' - Corpus ID : CorpusID:37220927
+#' <sha> - a Semantic Scholar ID, e.g. 649def34f8be52c8b66281af98ae884c09aef38b
+#' CorpusId:<id> - a Semantic Scholar numerical ID, e.g. 215416146
+#' DOI:<doi> - a Digital Object Identifier, e.g. DOI:10.18653/v1/N18-3011
+#' ARXIV:<id> - arXiv.rg, e.g. ARXIV:2106.15928
+#' MAG:<id> - Microsoft Academic Graph, e.g. MAG:112218234
+#' ACL:<id> - Association for Computational Linguistics, e.g. ACL:W12-3903
+#' PMID:<id> - PubMed/Medline, e.g. PMID:19872477
+#' PMCID:<id> - PubMed Central, e.g. PMCID:2323736
+#' URL:<url> - URL from one of the sites listed below, e.g. URL:https://arxiv.org/abs/2106.15928v1
 #'
-#' S2 is an abbreviation for Semantic Scholar
-#' MAG is an abbreviation for Microsoft Academic Graph
+#' URLs are recognized from the following sites:
+#' semanticscholar.org
+#' arxiv.org
+#' aclweb.org
+#' acm.org
+#' biorxiv.org
+#'
+#' https://api.semanticscholar.org/api-docs/graph#tag/Paper-Data/operation/get_graph_get_paper
 #'
 #' @return list representing S2 paper object
 #' @examples
 #' \dontrun{
-#'  S2_paper("fb5d1bb23724d9a5a5eae036a2e3cf291cac2c1b")
+#'  get_paper_details("fb5d1bb23724d9a5a5eae036a2e3cf291cac2c1b")
 #'  }
 #' @importFrom httr GET content status_code
 #' @importFrom jsonlite fromJSON
 #' @export
-S2_paper <- function(identifier, include_unknown_refs = FALSE) {
+get_paper_details <- function(identifier, include_unknown_refs = FALSE) {
 
   q <- NULL
 
   if (include_unknown_refs)
     q <- list(include_unknown_refs = "true")
 
-  key <- cfg()$S2_key
-  api <- S2_api()
+  key <- cfg()$s2_key
+  api <- s2_api()
 
   if (!is.null(key) && nchar(key) > 10) {
     res <- httr::GET(url = api, httr::add_headers(`x-api-key` = key),
@@ -124,29 +134,32 @@ S2_paper <- function(identifier, include_unknown_refs = FALSE) {
 #'
 #' This function retrieves Semantic Scholar data for
 #' an author given the S2Author identifier
-#' @param S2AuthorId string with author identifier
+#' @param author_id string with author identifier
 #' @details
 #' Example of Accessible Paper Identifiers:
 #' - S2 Author ID : 1741101
+#'
+#' Limitations:
+#' Can only return up to 10 MB of data at a time.
 #' @return list representing author object
 #' @examples
 #' \dontrun{
-#'  S2_author(1741101)
+#'  get_author_details(1741101)
 #'  }
 #' @importFrom httr GET status_code content
 #' @importFrom jsonlite fromJSON
 #' @export
-S2_author <- function(S2AuthorId) {
+get_author_details <- function(author_id) {
 
-  identifier <- S2AuthorId
-  key <- cfg()$S2_key
-  api <- S2_api()
+  identifier <- author_id
+  key <- cfg()$s2_key
+  api <- s2_api()
 
   if (!is.null(key) && nchar(key) > 10) {
     res <- httr::GET(url = api, httr::add_headers(`x-api-key` = key),
                      path = sprintf("v1/author/%s", identifier))
   } else {
-    res <- httr::GET(url = S2_api(),
+    res <- httr::GET(url = s2_api(),
                      path = sprintf("v1/author/%s", identifier))
   }
 
@@ -163,7 +176,7 @@ S2_author <- function(S2AuthorId) {
 #'
 #' This function retrieves Semantic Scholar data for
 #' an author given the S2Author identifier
-#' @param S2AuthorId string with author identifier
+#' @param author_id string with author identifier
 #' @param details one of "authors", "citations" or "references"
 #' @param offset integer paging offset
 #' @param limit integer paging length
@@ -174,21 +187,21 @@ S2_author <- function(S2AuthorId) {
 #' @return list representing author object
 #' @examples
 #' \dontrun{
-#'  S2_author(1681232)
-#'  S2_author2(1681232, fields="affiliations,aliases,externalIds")
-#'  S2_author2(1681232, fields="paperId,externalIds", details = "papers", offset=0, limit = 100)
+#'  author(1681232)
+#'  author2(1681232, fields="affiliations,aliases,externalIds")
+#'  author2(1681232, fields="paperId,externalIds", details = "papers", offset=0, limit = 100)
 #'  }
 #' @importFrom httr GET status_code content
 #' @importFrom jsonlite fromJSON
 #' @export
-S2_author2 <- function(
-  S2AuthorId, details=c("papers"), offset = 0, limit = 10, fields = NULL) {
+author2 <- function(
+  author_id, details=c("papers"), offset = 0, limit = 10, fields = NULL) {
 
   #https://api.semanticscholar.org/graph/v1/author/1681232?fields=affiliations,aliases,externalIds
 
-  identifier <- S2AuthorId
-  key <- cfg()$S2_key
-  api <- S2_api()
+  identifier <- author_id
+  key <- cfg()$s2_key
+  api <- s2_api()
 
   if (missing(details)) {
     qpath <- sprintf("graph/v1/author/%s", identifier)
@@ -210,7 +223,7 @@ S2_author2 <- function(
                      path = qpath,
                      query = q)
   } else {
-    res <- httr::GET(url = S2_api(),
+    res <- httr::GET(url = s2_api(),
                      path = qpath,
                      query = q)
   }
@@ -247,18 +260,18 @@ S2_author2 <- function(
 #' @return list representing paper objects
 #' @examples
 #' \dontrun{
-#'  S2_search_papers(keyword = "literature graph")
+#'  search_papers(keyword = "literature graph")
 #'  }
 #' @importFrom httr GET status_code content
 #' @importFrom jsonlite fromJSON
 #' @export
-S2_search_papers <- function(keyword, offset = 0, limit = 10, fields = NULL) {
+search_papers <- function(keyword, offset = 0, limit = 10, fields = NULL) {
   #http://api.semanticscholar.org/graph/v1/paper/search?query=literature+graph
   #https://api.semanticscholar.org/graph/v1/author/1681232?fields=affiliations,aliases,externalIds
 
   q <- keyword
   key <- cfg()$S2_key
-  api <- S2_api()
+  api <- s2_api()
 
   if (!is.null(fields) && !missing(fields)) {
     if (!validate_fields(fields, "paper_search"))
@@ -270,7 +283,7 @@ S2_search_papers <- function(keyword, offset = 0, limit = 10, fields = NULL) {
       path = "graph/v1/paper/search",
       query = list(query = q, offset = offset, limit = limit, fields = fields))
   } else {
-    res <- httr::GET(url = S2_api(),
+    res <- httr::GET(url = s2_api(),
       path = "graph/v1/paper/search",
       query = list(query = q, offset = offset, limit = limit, fields = fields))
   }
@@ -304,16 +317,16 @@ S2_search_papers <- function(keyword, offset = 0, limit = 10, fields = NULL) {
 #' @return list representing paper objects
 #' @examples
 #' \dontrun{
-#'  S2_paper2(identifier = "649def34f8be52c8b66281af98ae884c09aef38b")
+#'  paper2(identifier = "649def34f8be52c8b66281af98ae884c09aef38b")
 #'  }
 #' @importFrom httr GET status_code content
 #' @importFrom jsonlite fromJSON
 #' @export
-S2_paper2 <- function(identifier, details=c("authors", "citations", "references"),
+paper2 <- function(identifier, details=c("authors", "citations", "references"),
                              offset = 0, limit = 10, fields = NULL) {
 
   key <- cfg()$S2_key
-  api <- S2_api()
+  api <- s2_api()
 
   if (missing(details)) {
     qpath <- sprintf("graph/v1/paper/%s", identifier)
@@ -337,7 +350,7 @@ S2_paper2 <- function(identifier, details=c("authors", "citations", "references"
        query = q
     )
   } else {
-    res <- httr::GET(url = S2_api(),
+    res <- httr::GET(url = s2_api(),
        path = qpath,
        query = q
     )
@@ -364,8 +377,9 @@ S2_paper2 <- function(identifier, details=c("authors", "citations", "references"
   stop("HTTP status", status_code(res))
 }
 
-S2_author_fields <- function() {
-  readLines(textConnection("authorId
+author_fields <- function() {
+  readLines(textConnection(
+"authorId
 externalIds
 url
 name
@@ -392,37 +406,38 @@ papers.fieldsOfStudy
 papers.authors"))
 }
 
-S2_author_papers_fields <- function() {
-  readLines(textConnection("paperId
-externalIds
-url
-title
-abstract
-venue
-year
-referenceCount
-citationCount
-influentialCitationCount
-isOpenAccess
-fieldsOfStudy
-authors
-citations
-citations.paperId
-citations.url
-citations.title
-citations.venue
-citations.year
-citations.authors
-references
-references.paperId
-references.url
-references.title
-references.venue
-references.year
-references.authors"))
+author_papers_fields <- function() {
+  readLines(textConnection(
+    "paperId
+      externalIds
+      url
+      title
+      abstract
+      venue
+      year
+      referenceCount
+      citationCount
+      influentialCitationCount
+      isOpenAccess
+      fieldsOfStudy
+      authors
+      citations
+      citations.paperId
+      citations.url
+      citations.title
+      citations.venue
+      citations.year
+      citations.authors
+      references
+      references.paperId
+      references.url
+      references.title
+      references.venue
+      references.year
+      references.authors"))
 }
 
-S2_paper_search_fields <- function() {
+paper_search_fields <- function() {
   readLines(textConnection("paperId
 externalIds
 url
@@ -440,8 +455,9 @@ authors.authorId
 authors.name"))
 }
 
-S2_paper_fields <- function() {
-  readLines(textConnection("paperId
+paper_fields <- function() {
+  readLines(textConnection(
+"paperId
 externalIds
 url
 title
@@ -480,7 +496,7 @@ tldr
 "))
 }
 
-S2_paper_authors_fields <- function() {
+paper_authors_fields <- function() {
   readLines(textConnection("authorId
 externalIds
 url
@@ -504,7 +520,7 @@ papers.fieldsOfStudy
 papers.authors"))
 }
 
-S2_paper_citations_fields <- function() {
+paper_citations_fields <- function() {
   readLines(textConnection("contexts
 intents
 isInfluential
@@ -522,7 +538,7 @@ fieldsOfStudy
 authors"))
 }
 
-S2_paper_references_fields <- function() {
+paper_references_fields <- function() {
   readLines(textConnection("contexts
 intents
 isInfluential
@@ -541,9 +557,13 @@ authors"))
 }
 
 validate_fields <- function(fields,
-  rel = c("author", "author_papers",
-          "paper_search", "paper",
-          "paper_authors", "paper_citations", "paper_references")) {
+  rel = c("author",
+          "author_papers",
+          "paper_search",
+          "paper",
+          "paper_authors",
+          "paper_citations",
+          "paper_references")) {
 
   type <- match.arg(rel)
 
@@ -552,40 +572,40 @@ validate_fields <- function(fields,
   is_ok <- function(x, y) all(x %in% y)
 
   fields <- switch(type,
-         "author" = S2_author_fields(),
-         "author_papers" = S2_author_papers_fields(),
-         "paper" = S2_paper_fields(),
-         "paper_search" = S2_paper_search_fields(),
-         "paper_authors" = S2_paper_authors_fields(),
-         "paper_citations" = S2_paper_citations_fields(),
-         "paper_references" = S2_paper_references_fields()
+         "author" = author_fields(),
+         "author_papers" = author_papers_fields(),
+         "paper" = paper_fields(),
+         "paper_search" = paper_search_fields(),
+         "paper_authors" = paper_authors_fields(),
+         "paper_citations" = paper_citations_fields(),
+         "paper_references" = paper_references_fields()
          )
 
   if (isTRUE(is_ok(fn, fields))) {
-    return (invisible(TRUE))
+    return(invisible(TRUE))
   }
 
   idx <- which(fn %in% fields)
   valid <- fn[idx]
   invalid <- setdiff(fn, fields)
   message("Please provide comma separated (no spaces) string with fields")
-  message("Valid: ", paste0(collapse=",", valid))
-  message("Invalid: ", paste0(collapse=",", invalid))
+  message("Valid: ", paste0(collapse = ",", valid))
+  message("Invalid: ", paste0(collapse = ",", invalid))
   message("Available: ")
   print(setdiff(fields, fn))
-  return (invisible(FALSE))
+  return(invisible(FALSE))
 }
 
 #' Valid fields available for use in API calls
 #' @export
-S2_fields <- function() {
+api_fields <- function() {
   list(
-    author = S2_author_fields(),
-    author_papers = S2_author_papers_fields(),
-    paper_search = S2_paper_search_fields(),
-    paper_authors = S2_paper_authors_fields(),
-    paper_citations = S2_paper_citations_fields(),
-    paper_references = S2_paper_references_fields()
+    author = author_fields(),
+    author_papers = author_papers_fields(),
+    paper_search = paper_search_fields(),
+    paper_authors = paper_authors_fields(),
+    paper_citations = paper_citations_fields(),
+    paper_references = paper_references_fields()
   )
 }
 

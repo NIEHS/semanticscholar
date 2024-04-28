@@ -17,18 +17,20 @@ knitr::opts_chunk$set(
 
 <!-- badges: start -->
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://www.tidyverse.org/lifecycle/#experimental)
-[![R-CMD-check](https://github.com/KTH-Library/semanticscholar/workflows/R-CMD-check/badge.svg)](https://github.com/KTH-Library/semanticscholar/actions)
+[![R-CMD-check](https://github.com/NIEHS/semanticscholar/workflows/R-CMD-check/badge.svg)](https://github.com/NIEHS/semanticscholar/actions)
 <!-- badges: end -->
 
 The goal of `semanticscholar` is to offer data access to data from Semantic Scholar through their lightweight API which can provide data on publications and authors. Semantic Scholar is a free, non-profit academic search and discovery engine whose mission is to empower researchers.
 
+This is a fork of [KTH-Library/semanticscholar](https://github.com/kth-library/semanticscholar). We have forked the original project in order to add new endpoints from Semantic Scholar, and to update the syntax of functions to more closely model [Tidy design principles](https://design.tidyverse.org/).
+
 ## Installation
 
-You can install the current version of `semanticscholar` from [GitHub](https://github.com/kth-library/semanticscholar) with:
+You can install the current version of `semanticscholar` from [GitHub](https://github.com/NIEHS/semanticscholar) with:
 
 ``` r
 #install.packages("devtools")
-devtools::install_github("kth-library/semanticscholar", dependencies = TRUE)
+devtools::install_github("NIEHS/semanticscholar", dependencies = TRUE)
 ```
 
 ## Example
@@ -42,15 +44,15 @@ library(dplyr)
 suppressPackageStartupMessages(library(purrr))
 library(knitr)
 
-# get a paper using an identifier
-paper <- S2_paper("arXiv:1705.10311", include_unknown_refs = TRUE)
+# Get a paper using an identifier.
+paper <- get_paper_details("arXiv:1705.10311", include_unknown_refs = TRUE)
 
 # authors on that paper
 authors <- paper$authors
 
 # for one of the authors
 author_ids <- authors$authorId
-author <- S2_author(author_ids[1])
+author <- get_author_details(author_ids[1])
 
 # get just paper count, citation count and hIndex for a specific author
 countz <- S2_author2(author_ids[1], fields = "url,paperCount,citationCount,hIndex")
@@ -71,7 +73,7 @@ papers %>% head(5) %>% knitr::kable()
 ids <- c("10.1038/nrn3241", "CorpusID:37220927")
 my_refs <- zotero_references(ids)
 
-# this data can now be imported via the Zetero API using https://github.com/giocomai/zoteroR
+# This data can now be imported via the Zetero API using https://github.com/giocomai/zoteroR
 # showing data form the first record
 my_refs[[1]]$journalArticle %>% glimpse()
 my_refs[[2]]$creators %>% knitr::kable()
@@ -82,18 +84,21 @@ my_refs[[2]]$creators %>% knitr::kable()
 
 By default the rate limit allows 100 request per 5 minute period. This allows for making new requests every 3-4 seconds.
 
-By requesting an API key from Semantic Scholar, this rate can be faster, such as 100 requests per second. If you want to use an API key provided by Semantic Scholar, then edit the `~/.Renviron` file to add the key as a value for an environment variable `SEMANTICSCHOLAR_API`. This R package will then use API endpoints which are faster, with higher rate limits than the regular API endpoints.
+By requesting an API key from Semantic Scholar, this rate can be faster, such as 100 requests per second. If you want to use an API key provided by Semantic Scholar, then edit the `~/.Renviron` file to add the key as a value for an environment variable `SEMANTICSCHOLAR_API`. This R package will then attach the API key to the request.
 
 The rate limit and API base URL endpoint can be verified:
 
 ```{r ratelimit}
-S2_api()
-S2_ratelimit()
+s2_api()
+s2_ratelimit()
 ```
 
 ## Data source attribution
 
 When data from `semanticscholar` is displayed publicly, this attribution also needs to be displayed:
 
-`r S2_attribution()`
+`r s2_attribution()`
 
+## Copyright Notice
+
+This is a work of the U.S. Government and is not subject to copyright protection in the United States. Foreign copyrights may apply.

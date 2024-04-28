@@ -6,7 +6,7 @@
 an author given the S2Author identifier}
 \usage{
 S2_author2(
-  S2AuthorId,
+  author_id,
   details = c("papers"),
   offset = 0,
   limit = 10,
@@ -14,8 +14,6 @@ S2_author2(
 )
 }
 \arguments{
-\item{S2AuthorId}{string with author identifier}
-
 \item{details}{one of "authors", "citations" or "references"}
 
 \item{offset}{integer paging offset}
@@ -23,6 +21,8 @@ S2_author2(
 \item{limit}{integer paging length}
 
 \item{fields}{extra fields to include, for example "title,authors"}
+
+\item{S2AuthorId}{string with author identifier}
 }
 \value{
 list representing author object

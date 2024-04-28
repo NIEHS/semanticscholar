@@ -3,10 +3,10 @@ Type: Package
 Title: Data From Semantic Scholar Leightweight API
 Version: 0.2.0
 Authors@R: 
-    person(given = "Markus",
-           family = "Skyttner",
+    person(given = "Trey",
+           family = "Saddler",
            role = c("cre", "aut"),
-           email = "markussk@kth.se")
+           email = "trey.saddler@nih.gov")
 Description: Semantic Scholar is a free, non-profit, AI-powered academic search and 
     discovery engine whose mission is to empower researchers. It can be used as a 
     research tool for scientific literature available and is available at 
@@ -15,8 +15,8 @@ Description: Semantic Scholar is a free, non-profit, AI-powered academic search 
     This R package wraps the lightweight API in order to facilitate on demand access 
     to records in this data source.
 License: MIT + file LICENSE
-URL: https://github.com/KTH-Library/semanticscholar
-BugReports: https://github.com/KTH-Library/semanticscholar/issues
+URL: https://github.com/NIEHS/semanticscholar
+BugReports: https://github.com/NIEHS/semanticscholar/issues
 Encoding: UTF-8
 LazyData: true
 Imports: 
@@ -27,6 +27,6 @@ Imports:
     rlang,
     purrr
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.1.1
+RoxygenNote: 7.3.1
 Suggests: 
     testthat
